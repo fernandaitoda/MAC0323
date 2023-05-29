@@ -1,0 +1,562 @@
+Fernanda Itoda
+10740825
+
+RELATÓRIO EP1 MAC0323: IMPLEMENTAÇÃO DE TABELA DE SÍMBOLOS 
+OBS. Esse relatório foi feito para se enquadrar em metade da tela. Para tamanhos maiores a identação funciona, 
+para tamanhos menores não se adequa (esteticamente).
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>ORGANIZAÇÃO E INFORMAÇÕES GERAIS<<<<<<<<<<<<<<<<<<<<<<<<<<
+- Foram realizada mudanças no programa unit_test.cpp fornecido pelos monitores para permitir o uso de string
+(biblioteca string.h) ao invés de String (char*); Além disso, os arquivos "EP1" e "util.hpp/cpp" não foram necessários, visto que a 
+implementação foi feita inteira em tabeladesimbolos.hpp;
+
+- Cada tipo de estrutura possui sua classe própria, cuja única variável é um ponteiro para o ínicio da estrutura
+em questão. Além dela, possuem as funções auxiliares (como funções de rotação, funções recursivas para inserção/
+remoção ou rankeamento) privadas. As demais funções (especificadas pelo enunciado do EP) estão no setor público 
+dessas clases. Essas funções estarão implícitas no restante do relatório com exceção dos casos em que contenham 
+informações relevantes além das apresentadas a seguir. São elas:
+	_void insere (Chave chave, Item valor): insere a "chave" cuja frequência é "valor";
+	_Item devolve (Chave chave): retorna o valor de "chave";
+	_void remove (Chave): remove "chave" da tabela;
+	_int rank (Chave): retorna o número de chaves estritamente menores que "chave";
+	_Chave seleciona (int k): retorna a chave na posição k, ou seja, que possui k chaves estritamente enores 
+	que ela. Utilizam a função rank (Chave).
+	Em muitas das estruturas, foram utilizadas funções recursivas para realizar tais ações, de forma que 
+	essas funções somente chamam a respectiva recursiva em seu corpo.
+
+- Todas as funções e classes utilizam o template <Chave, Item>. No restante do relatório ele não será citado, 
+mas está implicito em cada enunciado de função/classe;
+
+- O construtor de todas as classes recebe como parâmetro "string arquivo", abre o arquivo utilizando a 
+biblioteca (fstream), lê cada token individualmente e aplica tolower (para evitar palavras repetidas), chama a 
+função "insere (token, 1)" até que todos as palavras do arquivo de entrada tenham sido lidas, fecha o arquivo. 
+Obs: tolower não torna minúsculas palavras acentuadas, o que não é um problema visto que o número de palavras 
+cujas letras acentuadas são maiúsculas tende a zero. No geral, são nomes próprios;
+
+- Foram criadas funções para imprimir todas as árvores, o que auxiliou no reconhecimento de eventuais erros 
+cometidos. Para vetores e listas não foi necessário visto que são estruturas mais simples. As funções foram 
+criadas para casos de textos de entrada pequenos, nos demais casos a impressão requere monitores maiores;
+
+- A função string removeSimbolos (string s) é aplicada após o tolower e antes da inserção, afim de garantir que 
+todos os tokens não contém símbolos, mas incluindo letras acentuadas, traços e apóstrofes (somente os que compõe 
+a palavra em questão). Para isso, foi consultada a tabela ASCII. Caso queira acrescentar os números na lista, 
+basta remover o intervalo [48,57] (0 a 9);
+
+- Letras acentuadas são maiores (vem depois na ordem alfabetica) que todas as não acentuadas, pela tabela ASCII. 
+Logo, África é maior que qualquer palavra iniciada por uma letra não acentuada. 
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>NÓS: GERAL<<<<<<<<<<<<<<<<<<<<<<<<<<
+- Cada tipo de estrutura possui uma classe para os nós, de forma que todas possuem como herança a classe 
+"No" (superclasse), que corresponde a classe de nós do vetor. Ou seja, todas as demais classes de nós são 
+subclasses de "No";
+
+- Todas as classes possuem um "get" e um "set" para cada campo privado. "get" retorna o campo indicado e "set" 
+seta esse campo com o valor recebido como parâmetro. Essas funções só serão explicadas em casos de informações 
+além dessas.
+
+_No: subclasse de todos os nós (com exceção de No23). Usado para VO e VD.
+	- privado: 
+		Chave chave; 
+		Item valor.
+	- público: 
+		Chave getChave ();
+		Item getValor ();
+		void setChave (Chave ch);
+		void setValor (Item val).
+		
+_NoLista: usado para LD, LO e HS.
+	- privado:
+		NoLista *prox: aponta para próxima célula.
+	- público:
+		NoLista *getProx ();
+		void setProx (NoLista *prx).
+		
+_NoArvoreBin: usado para AB.
+	- privado:
+		NoArvoreBin *dir, *esq: aponta para filhos da direita e esquerda, respectivamente.
+	- público:
+		NoArvoreBin *getEsq () e NoArvoreBin *getDir ();
+		void setEsq (NoArvoreBin *e) e void setDir (NoArvoreBin *d);
+
+_NoTreap: usado para TR. 
+	- privado:
+		int prior: indica a prioridade do nó em questão; OBS. o valor dese campo é inicializado junto ao 
+		nó, sendo um número aleatório menor que 100;
+		NoTreap *esq, *dir: aponta para filhos da direita e esquerda, respectivamente.
+	- público: 
+		int getPrior ();
+		NoTreap *getEsq (), NoTreap *getDir (), void setEsq (NoTreap *e), void setDir (NoTreap *d);
+		
+_No23: usado para A23
+	- privado: 
+		No *no1, *no2: quando No23 é do tipo nó duplo, ambos estão preenchidos;
+		int nChaves: indica se nó é nó único ou nó duplo;
+		No23 *esq, *meio, *dir, *pai;
+	- público:
+		No23 *get.. (.. substitui Esq, Dir, Meio e Pai);
+		void setNo (int num, No *no): seta no nó número "num" o nó "no";
+		No *getNo (int num): retorna no1 ou no2, quando "num" é 1 e 2, respectivamente;
+		void *set.. (..substitui Esq, Meio, Dir, Pai e nChaves).
+		
+_NoRN: usado para RN
+	- privado: 
+		bool cor: RUBRO ou NEGRA;
+		NoRN *esq, *dir, *pai: aponta para célula dos filhos.
+	- público:
+		bool/NoRN* get.. (.. substitui Cor, Esq, Dir, Pai e Tio);
+		void set.. (.. substitui Esq, Pai, Dir, Cor);
+		void trocaCor (): inverte o valor de "cor";
+		bool filhoRubro: retorna true se o nó tiver um filho rubro e false caso contrário.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>VETOR DESORDENADO<<<<<<<<<<<<<<<<<<<<<<<<<<
+- É inicializado com tamanho máximo de 1; usa a função resize quando necessário;
+
+_FUNÇÕES PÚBLICAS:
+	- insere: insere o nó após todos os já existentes no vetor;
+	
+_FUNÇÕES AUXILIARES:
+	- void resize (): quando chamada, a função dobra o tamanho do vetor atual (2 * tamMax). 	
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>VETOR ORDENADO<<<<<<<<<<<<<<<<<<<<<<<<<<
+- É inicializado com tamanho máximo de 1; usa a função resize quando necessário;
+
+_FUNÇÕES PÚBLICAS:
+	- insere: insere no local apropriado para que o vetor fique em ordem crescente;
+	
+_FUNÇÕES AUXILIARES:
+	- void resize (): quando chamada, a função dobra o tamanho do vetor atual (2 * tamMax).
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>LISTA LIGADA DESORDENADA<<<<<<<<<<<<<<<<<<<<<<<<<<
+_FUNÇÕES PÚBLICAS:
+	- insere: insere o nó após todos os já existentes na lista ligada;
+	
+_FUNÇÕES AUXILIARES: não possui.
+	
+>>>>>>>>>>>>>>>>>>>>>>>>>>LISTA LIGADA ORDENADA<<<<<<<<<<<<<<<<<<<<<<<<<<
+_FUNÇÕES PÚBLICAS:
+	- insere: insere no local apropriado para que a lista ligada fique em ordem crescente e organiza os 
+	ponteiros;
+	
+_FUNÇÕES AUXILIARES: não possui.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>ÁRVORE DE BUSCA BINÁRIA<<<<<<<<<<<<<<<<<<<<<<<<<<
+_OBSERVAÇÕES IMPORTANTES:
+	- No pior caso, funcionam como uma lista ligada (percorre a árvore em zig-zag);
+	- A subárvore da esquerda de um nó possui todas as chaves menores;
+	- A subárvore da direita de um nó possui todas as chaves maiores.
+	
+_FUNÇÕES PÚBLICAS:
+	- insere , remove e rank utilizam recursivas auxiliares.
+
+_FUNÇÕES AUXILIARES:
+	- int rankR (NoArvoreBin *no, Chave chave): vai da raiz às folhas recursivamente, contabilizando cada 
+	vez que o nó contém uma chave estritamente menor que chave;
+	
+	- NoArvoreBin *max (NoArvoreBin *raiz): retirada das notas de aula, retorna o maio nó dentre as 
+	subárvores dos filhos do nó recebido como parâmetro;
+	
+	- NoArvoreBin *removeR (NoArvoreBin *raiz, chave): busca e remove recursivamente o nó que contém 
+	"chave"; após a remoção, substitui o local desse nó pelo nó retornado em "max". 
+	
+>>>>>>>>>>>>>>>>>>>>>>>>>>TREAP<<<<<<<<<<<<<<<<<<<<<<<<<<
+_OBSERVAÇÕES IMPORTANTES:
+	- São ABB com o campo "prioridade" aleatóriamente calculado;
+	- A subárvore da esquerda de um nó possui todas as chaves menores;
+	- A subárvore da direita de um nó possui todas as chaves maiores.
+
+_FUNÇÕES PÚBLICAS: citadas em observações gerais.
+
+_FUNÇÕES AUXILIARES:
+	- int rankR (NoTreap *no, Chave chave): idêntica à função rankR de AB.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>ÁRVORE 2-3<<<<<<<<<<<<<<<<<<<<<<<<<<
+_OBSERVAÇÕES IMPORTANTES:
+	- Sempre balanceada, logo se o nó não possui filho esquerdo, também não possui direito/meio;
+	- Nós duplos tem 3 filhos (esquerda, meio e direita);
+	- Nós únicos tem 2 filhos (esquerda e meio). Foi usado meio ao invés de direita para reduzir comparações
+	feitas nos casos que precisariam de 2, uma para nós únicos e uma para nós duplos. Isso ocorre nas 
+	funções de rotação e merge, por exemplo;
+	- A subárvore da esquerda de um nó possui todas as chaves menores que os dois nós;
+	- A subárvore da direita de um nó possui todas as chaves maiores que os dois nós;
+	- A subárvore do meio possui todas as chaves entre os dois nós;
+	- Underflow ocorre em casos de remoção, e overflow em casos de inserção.
+	
+_FUNÇÕES PÚBLICAS:
+	- void insere (Chave chave, Item valor): no caso da função busca retornar um endereço, apenas acrescenta 
+	"valor" nessa célula. No caso da função busca retornar NULL, cria um No(novo) com a nova Chave/Item e 
+	chama a função insereR (raiz, novo) auxiliar. Se a função retorna uma estrutura do tipo out com o campo 
+	"orfao" não vazio, realiza o seguinte processo:
+	i. cria um novo No23(celula) e insere "orfao", retornado na estrutura no primeiro campo. 
+	ii. insere "celula" antes da raiz da árvore, tornando-a a nova raiz.
+	 
+_FUNÇÕES AUXILIARES:
+	- No* busca (No23 *no, Chave chave): realiza a busca de "chave" a partir de "no", recebido como 
+	parâmetro. Retorna o endereço da célula No23 que contém "chave" e NULL caso contrário.
+	
+	- out* insereR (No23 *no, No *novo): considera os seguintes casos:
+		_CASO 1 (árvore vazia) 
+		 i. insere o nó na raiz;
+		 ii. retorna NULL.
+		
+		_CASO 2 (caso simples): folha e nó único
+		 i. "novo" é inserido no primeiro (se for menor que no);
+		 ii. "novo" é inserido no segundo campo (se for maior que no).
+		
+		_CASO 3 (overflow): folha e nó duplo
+		 i.  checa se a rotação é possível e a realiza nos casos positivos;
+		 ii. senão, realiza a divisão chamando a função split (no, novo, NULL); 		 
+		 iii. retorna OUT, que será vazio caso a rotação tenha ocorrido, e não-vazio com um orfao e 
+		 valor intermediario caso contrário;
+		
+		_CASO 4 (recursão simples): não-folha e nó único
+		 i.  chama insereR (no->getEsq(), novo) se "no" for maior que "novo" e insereR (no->getMeio(), 
+		 novo) caso seja menor. 
+		 ii. caso a função retorne uma estrutura com o campo orfao não-nulo, organiza os subcampos 
+		 de forma que os nós retornados sejam realocados corretamente e retorna NULL, ou seja,
+		 	"intermediario" é inserido em "no":
+		 	-> 1º "no" se OUT retornou da subárvore esquerda;
+		 	-> 2º "no" se OUT retornou da subárvore direita.
+		 	"orfao" é setado como um dos filhos de "no":
+		 	-> filho do meio se OUT retornou da subárvore esquerda (esq < orfao < meio);
+		 	-> filho da esquerda se OUT retornou da subárvore do meio (esq < meio < orfao).
+		Além disso, o nó, que era único, se torna um nó duplo.
+		
+		_CASO 5 (recursão composta): não-folha e nó duplo
+		 i. chama insereR (-filho correto-, novo) de forma que "filho correto" é selecionado através da 
+		 comparação da chave atual (no) com aquela a ser inserida (novo).
+		 ii. se a função retorna uma estrutura com o campo orfão não-nulo, realiza o mesmo processo do 
+		 CASO 3. Em alguns casos, o campo interm está vazio em OUT, de forma que qualquer comparação 
+		 dentro da função com ele, funciona como se ele fosse o maior dentre os comparados. 
+		 iii. caso contrário, retorna NULL.
+		 
+	- out* split (No23 *no, No *add, No23 *orfao): 
+	Um novo No23 do tipo nó único é criado (futuro orfão), e irá guardar em seu primeiro nó de maior chave;
+	O futuro orfão é sempre nó único.
+	"add" é o nó a ser inserido em "insere";
+	A divisão ocorre de forma que o valor intermediario e maior (novo orfão) são retornados na estrutura;
+	O 1º campo de "no" é sempre será o nó com a menor chave (ao final, nó é reduzido a no único);
+	Nos casos de não-folha, os ponteiros também são atualizados corretamente.
+	o nó de "orfao" sempre veio da mesma subárvore que "add", logo, se a chave de "add" está entre as chaves dos 
+	nós de "no", "orfao" também está.
+		_CASO 1-> add < 1º "no" < 2º "no"; esq < orfao < meio < dir;
+		_CASO 2-> 1º "no" < add < 2º "no"; esq < meio < orfao < dir;
+		_CASO 3-> 1º "no" < 2º "no" < add; esq < meio < dir < orfao.
+	
+	- void rotDir (No23 *no, No *novo, No23 *orfao) 
+	Funciona para "no" único ou duplo; 
+	Faz o movimento "->";
+	Maior, interm, menor se referem às chaves dos na comparação de "novo", 1º "no" e 2º "no"; 
+	Vazio significa que não muda.
+		*_OVERFLOW_*
+		_CASO 1: pai (nó duplo) "no" (meio). 
+		Maior filho do meio (duplo) vai para direita (único que se torna duplo).
+		 	i. VALORES: 
+		 	PAI || |maior||;
+			MEIO ||menor|interm|| DIR ||ex 2º "PAI"|ex 1º "DIR"||.
+			
+			ii. PONTEIROS: só nos casos em que a rotação não é na folha (tem orfão).
+			Divididos em 3 casos, nos quais em todos o maior filho de "no (que é filho do meio)"
+			dentre seus 3 filhos e "orfao" (que pode ser originado de qualquer um dos 3) se torna
+			o filho esquerdo do irmão direito. Ou seja:
+			-MEIO (E: menor, M: 2º menor, D: 2º maior) e DIR (E: 1º maior, M: antigo E, D: antigo M).
+			
+		_CASO 2: pai (nó único ou duplo) "no" (esquerda).
+		Maior filho da esquerda (duplo) vai para meio (único que se torna duplo). OBS: meio em nó único 
+		representa direita.
+			i. VALORES:
+			PAI ||maior| ||;
+			ESQ ||menor|interm|| MEIO ||ex 1º PAI|ex 1º MEIO||.
+			
+			ii. PONTEIROS: só nos casos em que a rotação não é na folha (tem orfão).
+			Divididos em 3 casos, nos quais em todos o maior filho de "no (que é filho da esquerda)"
+			dentre seus 3 filhos e "orfao" (que pode ser originado de qualquer um dos 3) se torna
+			o filho esquerdo do irmão do meio. Ou seja:
+			-ESQ (E: menor, M: 2º menor, D: 2º maior) e MEIO (E: 1º maior, M: antigo E, D: antigo M).
+			 
+		*_UNDERFLOW_*
+		 No tem 0 chaves e irmão tem 2 chaves;
+		 O irmão com 2 chaves é indicado pelo *.
+		 _CASO 1: pai (nó duplo) "no" (direita).
+		 Passa um nó de MEIO para "no" que está com 0 chaves.
+		 	i. VALORES:
+		 	PAI || |ex 2º MEIO||;
+		 	MEIO* || |X|| DIR ||ex 2º PAI|X||.	 
+		 	
+		 	ii. PONTEIROS:
+		 	- DIR (E: ex D de MEIO, M:);
+		 	
+		 _CASO 2: pai (nó único ou duplo) "no" (meio).
+		 Passa um nó de ESQ para "no" que está com 0 chaves.
+		 	i. VALORES:
+		 	PAI ||ex 2º ESQ| ||;
+		 	ESQ* ||ex 1º PAI|X|| MEIO ||ex 1º PAI|X||;
+		 	
+		 	ii. PONTEIROS:
+		 	- MEIO (E ex D de ESQ:, M:).
+		 
+	- void rotEsq (No23 *no, No *novo, No23 *orfao) 
+	Funciona para "no" único ou duplo; 
+	Faz o movimento "<-";
+	NULL indica o filho que irá sumir;
+	Maior, interm, menor se referem às chaves dos na comparação de "novo", 1º "no" e 2º "no"; 
+	Vazio significa que não muda.
+		*_OVERFLOW_*
+		_CASO 1: pai (nó duplo) "no" (direita).
+		Menor filho da direita (duplo) vai para o meio (único que se torna duplo).
+			i. VALORES:
+			PAI || |menor||;
+			ESQ || | || MEIO || |ex 2º PAI|| DIR ||interm|maior||.
+			
+			ii. PONTEIROS: só nos casos em que a rotação não é na folha (tem orfão).
+			Divididos em 3 casos, nos quais em todos o menor filho de "no (que é filho da direita)" 
+			dentre seus 3 filhos e "orfao" (que pode ser originado de qualquer um dos 3) se torna
+			o filho direito do irmão do meio. Esse menor, em todos os casos, é o filho da esquerda. 
+			Ou seja:
+			-MEIO (E:, M:, D: menor (ex E de DIR)) e DIR (E: 2º menor, M: 2º maior, D: maior).
+		
+		_CASO 2: pai (nó único ou duplo) "no" (meio).
+		Menor filho do meio (duplo) vai para o esquerdo (único que se torna duplo).
+			i. VALORES:
+			PAI ||menor| ||;
+			ESQ || |ex 1º PAI|| MEIO  ||interm|maior|| DIR || | ||.
+			
+			ii. PONTEIROS: só nos casos em que a rotação não é na folha (tem orfão).
+			Divididos em 3 casos, nos quais em todos os menor filho de "no (que é fiho do meio)" 
+			dentre seus 3 filhos e "orfao" (que pode ser originado de qualquer um dos 3) se torna
+			o filho direito do irmão esquerdo. Esse menor, em todos os casos, é o filho da esquerda.
+			Ou seja: 
+			-ESQ (E:, M:, D: menor (ex E de MEIO) e MEIO (E: 2º menor, M: 2º maior, D: maior).
+	
+		 *_UNDERFLOW_*
+		 No tem 0 chaves e irmão tem 2 chaves;
+		 O irmão com 2 chaves é indicado pelo *.
+		 _CASO 1: pai (nó duplo) "no" (meio).
+		 Passa um nó de DIR para "no" que está com 0 chaves.
+		 	i. VALORES:
+		 	PAI || |ex 1º DIR||;
+		 	ESQ || | || MEIO ||ex 2º PAI|X|| DIR* ||ex 2º DIR |X||.	 
+		 	
+		 	ii. PONTEIROS:
+		 	- MEIO (E:, M: ex E de DIR, D:);
+		 	- DIR (E: antigo M, M: antigo D, D: NULL).
+		 	
+		 _CASO 2: pai (nó único ou duplo) "no" (esquerda).
+		 Passa um nó de MEIO para "no" que está com 0 chaves.
+		 	i. VALORES:
+		 	PAI ||ex 1º MEIO| ||;
+		 	ESQ ||ex 1º PAI|X|| MEIO* || |X|| DIR || | ||;
+		 	
+		 	ii. PONTEIROS:
+		 	- ESQ (E:, M: ex E de MEIO);
+		 	- MEIO (E antigo M:, M: antigo D).
+
+	- int ifRotaciona (No23 *no): 
+	Analisa se ocorreu overflow ou underflow em "no";
+	Retorna ESQUERDA, DIREITA ou 0 (nenhuma rotação) para indicar se é possível rotacionar;
+	"->" representa rotação para direita e "<-" rotação para esquerda.
+		*_INSERÇÃO_*
+		i. rotações em nós com 1 irmão só ocorrem se:
+		_CASO 1: "no" é filho da esquerda e seu irmão é nó único (->);
+		_CASO 2: "no" é filho do meio e seu irmão é nó único (<-).
+		ii. rotações em nó com 2 irmãos só ocorrem se: 
+		_CASO 1: "no" é filho da esquerda-> se irmão do meio é nó único (->);
+		_CASO 2: "no" é filho do meio-> se irmão da esquerda (<-) ou irmão da direita (->) é nó único;
+		_CASO 3: "no" é filho da direita-> se irmão do meio é nó único (<-).
+	
+		*_REMOÇÃO_*
+		i. rotações em nó com 1 irmão só ocorrem se: 
+		_CASO 1: "no" é filho da esquerda e seu irmão é nó duplo (<-);
+		_CASO 2: "no" é filho do meio e seu irmão é nó duplo (->);
+		ii. rotações em nó com 2 irmãos só ocorrem se:
+		_CASO 1: "no" é filho da esquerda e irmão do meio é nó duplo (<-);
+		_CASO 2: "no" é filho do meio-> se irmão da esquerda (->) ou irmão da direita (<-) é nó duplo;
+		_CASO 3: "no" é filho da direita e irmão do meio é nó duplo (->)
+		
+	- No23* merge (No23 *no, No23 *orfao): 
+	Retorna o novo orfão;
+	Funciona para "no" único ou duplo; 
+	NULL representa o filho a ser deletado;
+	Vazio significa que não houve mudança;
+	Todos os ponteiros (indicados por "antigo E", "antigo M" ou "antigo D" referem-se aos antigos filhos do nó à 
+	que pertencem).
+		_CASO 1: pai (nó duplo) "no" (direita).
+		Pai passa a ser nó único-> filho da direita some.
+			i. VALORES: 
+			PAI || |X||;
+			ESQ || | || MEIO || |ex 2º PAI|| DIR->NULL.
+			
+			ii. PONTEIROS: 
+			- MEIO (E:, M:, D: orfao).
+			
+		_CASO 2: pai (nó único ou duplo) "no" (esquerda).
+		Pai passa a ser nó único-> filho da esquerda some.
+			i. VALORES:
+			PAI ||ex 2º PAI|X||;
+			ESQ->NULL MEIO ||ex 1º PAI|ex 1º MEIO|| DIR || | ||.
+			
+			i. PONTEIROS: 
+			- PAI (E: antigo M, M: antigo D);
+			 (abaixo apenas se orfao não é nulo)
+			- MEIO (E: orfao, M: antigo E, D: antigo M);
+			- novo orfão é MEIO.
+			
+		_CASO 3: pai (nó único ou duplo) "no" (meio).
+		Pai passa a ser nó único-> filho do meio some.
+			i. VALORES:
+			PAI ||ex 2º PAI|X||;
+			ESQ || |ex 1º PAI|| MEIO->NULL DIR || | ||.
+			
+			ii. PONTEIROS:
+			- PAI (E:, M: antigo D);
+			 (abaixo apenas se orfao não é nulo)
+			- ESQ (E:, M:, D: orfao);
+			- novo orfão é ESQ.
+	
+	- No23* removeR (No23 *no, Chave chave):
+		_CASO 1 (nó deletado de não-folha): 
+		i. procura dentre seus filhos o nó com a maior chave. Para isso vai "descendo" pelos ramos 
+		da direita até um nó-folha:
+			- se a chave está no 1º -> a busca é na subárvore da esquerda;
+			- se a chave está no 2º -> a busca é na subárvore do meio;
+		ii. troca o nó de maior chave com o nó a ser deletado; O nó a ser deletado agora está em um nó-folha;
+		iii. deleta esse nó, que agora contém 1 ou *0 chaves*.
+		
+	
+		_CASO 2 (nó deletado da folha): pode estar em 1º "no" ou 2º "no". Quando no 1º e o nó é duplo, o nó 
+		de 2º passa para o 1º. "no" passa a ser nó único. Quando o nó é único, ele passa a conter *0 chaves*.
+	
+		_CASO 3 (recursão): chama a função com o campo "No23 *no" com a subárvore correta.
+	
+		*_REBALANCEAMENTO_*
+		 i. o nó tem 0 chaves é a raiz: deleta-se a raiz e a árvore fica vazia.
+		 ii. o nó tem 0 chaves: 
+		 	-checa se é possível rotacionar;
+		 	-se sim, rotaciona, se não, funde-se 2 nós (chama função merge).
+		 	- a função merge retorna um orfao. Logo, se rotacionou, retorna NULL, caso contrário, retorna
+		 	o orfao.
+	
+	
+	-rankR (No23 *no, Chave chave): é igual à função busca, mas com o contador nos casos em que o nó em análise é 
+	estritamente menor que "chave".
+	
+>>>>>>>>>>>>>>>>>>>>>>>>>>ÁRVORE RUBRO-NEGRA<<<<<<<<<<<<<<<<<<<<<<<<<<
+_OBSERVAÇÕES IMPORTANTES:
+	- Para balanceamento: recoloring ou rotation;
+	- É aproximadamente balanceada;
+	- São eficientes no pior caso de busca (proporcional à altura da árvore), diferente de ABBs;
+	- Cor do no-nulo é negro; cor de todos os novos nós é rubro;
+	- A subárvore da esquerda de um nó possui todas as chaves menores;
+	- A subárvore da direita de um nó possui todas as chaves maiores.
+	
+_FUNÇÕES PÚBLICAS:
+	- void insere (Chave chave, Item valor): utiliza a função insereR (NoRN*, Chave, Item, NoRN*) auxiliar 
+	e, em seguida, chama a função fixInsere (NoRN*, NoRN*) com a raiz e o novo nó como parâmetros. Nos casos 
+	em que nenhum nó novo será acrescentado à árvore, o rebalanceamento não ocorre e a memória alocada no 
+	início dessa função é desalocada na função recursiva. OBS: Só funciona no caso de inserções unitárias, o 
+	que nesse EP não será um problema.
+
+_FUNÇÕES AUXILIARES:
+	- void fixInsere (NoRN *no, NoRN *novo): a função realiza o rebalanceamento após inserções, que costumam 
+	causar violações nas regras da árvore rubro-negra.
+		_CASO 1: tio é rubro -> somente recoloring necessário; 
+		 i. vo é pintado de rubro;
+		 ii. pai e tio são pintados de negro; 
+		 iii. mudança de referência para vo;
+		 iv. repete-se o processo.
+		 
+		 _CASO 2: ESQUERDA-DIREITA (pai é filho esquerdo e referência é filho direito)
+		 i. rotação para esquerda (rotEsq (pai));
+		 ii. mudança de referência para pai; 
+		 iii. aplica-se ESQUERDA-ESQUERDA.
+		 
+		 _CASO 3: ESQUERDA-ESQUERDA (pai é filho esquerdo e referência é filho esquerdo)
+		 i. rotação para direita (rotDir (pai));
+		 ii. inverte cores do pai e vo.
+		 
+		 _CASO 4: DIREITA-ESQUERDA (pai é filho direito e referência é filho direito)
+		 i. rotação para direita (rotDir (pai));
+		 ii. mudança de referência para pai;
+		 iii. aplica-se DIREITA-DIREITA.
+		 
+		 _CASO 5: DIREITA-DIREITA (pai é filho direito e referência é filho direito)
+		 i. rotação para esquerda (rotEsq (pai));
+		 ii. inverte cores do pai e vo.
+		 
+	- void fixRemove (NoRN *no): a função realiza o rebalanceamento após remoções, que costumam causar 
+	violações nas regras da árvore rubro-negra. OBS: o caso simples é consertado na própria função removeR.
+		_CASO 1: irmão é rubro - ESQUERDA (irmão)
+		i. pinta o pai de rubro e o irmão de negro.
+		ii. rotação para direita (rotDir (pai));
+		iii. recursão de fixRemove (no) para aplicar caso de irmão e filhos negros.
+		
+		_CASO 2: irmão é rubro - DIREITA (irmão)
+		i. pinta o pai de rubro e o irmão de negro.
+		ii. rotação para esquerda (rotEsq (pai));
+		iii. recursão de fixRemove (no) para aplicar caso de irmão e filhos negros.
+		
+		_CASO 3: irmão é negro - ESQUERDA-ESQUERDA (irmão)(sobrinho)
+		i. pinta o sobrinho rubro da cor do irmão (negro, pois se tornará o irmão após rotação);
+		ii. pinta o irmão da cor do pai (pois se tornara o pai após rotação);
+		iii. rotação para direita (rotDir (pai)).
+		iv. resultado: novo pai = antigo irmão; novo irmão = antigo sobrinho; nova referência = antigo 
+		pai.
+		
+		_CASO 4: irmão negro - DIREITA-ESQUERDA (irmão)(sobrinho)
+		i. pinta o sobrinho rubro da cor do pai (pois se tornará pai após rotação)
+		ii. aplica-se duas rotações: primeiro para direita com referência no irmão (rotDir (irmao)) e 
+		depois para esquerda com referência no pai (rotEsq (pai));
+		iii. resultado: novo pai = antigo sobrinho; irmão se mantém; nova referência = antigo pai.
+		
+		_CASO 5: irmão negro - ESQUERDA-DIREITA (irmão)(sobrinho)
+		i. pinta o sobrinho rubro da cor do pai (pois se tornará pai após rotação);
+		ii. aplica-se duas rotações: primeiro para esquerda com referência no irmão (rotEsq (irmao)) e 
+		depois para direita com referência no pai (rotDir (pai));
+		iii. resultado: novo pai = antigo sobrinho; irmão se mantém; nova referência = antigo pai.
+		
+		_CASO 6: irmão negro - DIREITA-DIREITA (irmão)(sobrinho)
+		i. pinta o sobrinho rubro da cor do irmão (negro, pois se tornará o irmão após rotação);
+		ii. pinta o irmão da cor do pai (pois se tornara o pai após rotação);
+		iii. rotação para esquerda (rotEsq (pai));
+		iv. resultado: novo pai = antigo irmão; novo irmão = antigo sobrinho; nova referência = antigo 
+		pai.
+		
+		_CASO 7: irmão negro com filhos negros 
+		i. pinta irmão de rubro;
+		iia. se pai for negro mudança de referência: recursão de fixRemove (pai); 
+		iib. se pai for rubro -> apenas pinta de preto.
+		 
+	- NoRN* substituto (NoRN *no): retorna o nó que substituirá "no" após a remoção. 
+	 
+	- NoRN* insereR (NoRN *no, Chave chave, Item valor, NoRN *novo): ocorre como na Árvore Binária de busca, 
+	seguida da chamada da função para rebalanceamento. 
+	
+	- NoRN* removeR (NoRN *no, Chave chave): remove o nó e chama a função fixRemove (NoRN *no) para 
+	rebalancear a árvore. Além disso, trata do caso simples de remoção.
+		_CASO SIMPLES: se o nó a ser removido ou o seu substituto (pode ser o ramo da esquerda ou 
+		direita) é rubro.
+		i. remove o nó;
+		ii. pinta o substituto de negro.
+		
+	- int rankR (NoRN *no, Chave chave): idêntica à função rankR de treap.
+
+	- NoRN* rotEsq (NoRN *ptr) e NoRN* rotDir (NoRN *ptr): ambas as funções realizam a seguinte rotação, 
+	setando os ponteiros corretamente. 
+	INÍCIO				FIM
+	(pai)      - caso exista -	(pai)
+	(1)<-ptr			(2)
+	(2)->ptrD ou ptrE	      (1) (3) para rotEsq ou (3) (1) para rotDir
+	(3)
+	
+>>>>>>>>>>>>>>>>>>>>>>>>>>TABELA DE HASHING<<<<<<<<<<<<<<<<<<<<<<<<<<
+_OBSERVAÇÕES IMPORTANTES:
+	- As colisões foram resolvidas por Separate chaining; 
+	- Tabelas de Hashing são muito eficientes para inserções, busca e remoções, mas nada eficientes para operações de rankeamento por exemplo.
+
+_FUNÇÕES PÚBLICAS:
+	- as funções rank, seleciona não são muito eficientes, pois realizam a contagem percorrendo toda a tabela de 
+	hashing. Isso ocorre pois essa forma de estrutura é mais eficaz para buscas/inserções/remoções.
+
+_FUNÇÕES AUXILIARES:
+	- int hash (Chave chave): foi usada a função fornecida em MAC0121, indicada como adequada para garantir 
+	mais unicidade.
+	

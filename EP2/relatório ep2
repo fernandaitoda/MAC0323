@@ -1,0 +1,152 @@
+Fernanda Itoda
+10740825
+
+RELATÓRIO EP2 MAC0323: GRAFOS DE TEXTOS
+OBS. Esse relatório foi feito para se enquadrar em metade da tela. Para tamanhos maiores a identação funciona, 
+para tamanhos menores não se adequa (esteticamente).
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>ORGANIZAÇÃO E INFORMAÇÕES GERAIS<<<<<<<<<<<<<<<<<<<<<<<<<<
+- O grafo foi implementado através da lista de adjacência, é não é direcionado e simétrico;
+- Por não ser direcionado, o número de arestas é sempre par;
+- Grande parte da interface foi baseada no EP1, dentre as funções: removeSimbolos, resize, main, doTest;
+- Como o grafo não é direcionado, se A é vizinho de B, então B é vizinho de A. Dessa forma, ao procurar ciclos 
+contendo uma dada string, qualquer vértice com grau > 0 está num ciclo. Caso queira que ciclos sejam restritos
+a ciclos com 3 ou mais vértices (comprimento maior que 2), basta retirar:
+da função emCiclo (string a):
+	if (graph[i]->getGrau() > 0)
+		return true;
+da função emCiclo (string a, string b) e realizar alterações necessárias: 
+	if (graph[A]->getGrau() > 0 && graph[B]->getGrau() > 0) {
+                for (AdjNode *p = graph[A]->getList(); p; p = p->getProx())
+                    if (p->getInd() == B)
+                        return true;
+            }
+   
+>>>>>>>>>>>>>>>>>>>>>>>>>>CLASSES E FUNÇÕES<<<<<<<<<<<<<<<<<<<<<<<<<<
+_string removeSimbolos (string s): é aplicada após o tolower e antes da inserção, afim de garantir que 
+todos os tokens não contém símbolos, mas incluindo letras acentuadas, traços e apóstrofes (somente os que compõe 
+a palavra em questão). Para isso, foi consultada a tabela ASCII. Caso queira acrescentar os números na lista, 
+basta remover o intervalo [48,57] (0 a 9);
+
+_void doTest (Graph *G): realiza os testes no Grafo (ver sessão TESTES);
+
+_ADJNODE: nós da lista de adjacência.
+	- privado:
+		int ind: índice do vértice vizinho;
+		AdjNode *prox: ponteiro para próximo vizinho;
+	-público:
+		funções necessárias para manipulação do campo privado.
+	
+_VERTEX: vértice do grafo.
+	- privado:
+		string palavra: conteúdo do vértice;
+		AdjNode* list: ponteiro para a lista de adjacência do vértice em questão;
+		int grau: nº de vizinhos do vértice;
+	- público:
+		funções necessárias para manipulação do campo privado.
+
+_GRAFO: 
+	- privado:
+		Vertex **graph;
+		int *comp: os índices estão pareados com "graph'. Em comp[i], está o número do componente do 
+		qual graph[i] faz parte;
+		int V, E, C: número de vérties, arestas e componentes, respectivamente;
+	 	int min, tamMax: min é o k dado pelo usuário; tamMax refere-se ao tamanho máximo de graph;
+	 
+	 - público:
+		_int insere (string palavra): Insere a palavra e retorna o número de arestas adicionados ao grafo, 
+		retorna -1 se a palavra já está no grafo ou tem tamanho menor que k;
+		
+		_int vertices(): retorna o número de vértices do grafo;
+		
+		_int arestas(): retorna o número de arestas do grafo;
+		
+		_int componentes(): retorna o número de componentes do grafo;
+		
+		_bool conexo(): retorna se o grafo é ou não conexo;
+		
+		_int tamComp (string palavra): retorna o tamanho da componente conexa onde está a palavra ou -1 caso
+		ela não se encontre no grafo;
+		
+		_int dist (string a, string b): retorna a menor distância entre as palavras a e b ou -1 caso elas estejam
+		desconexas ou não estejam no grafo;
+		
+		_bool emCiclo (string a): retorna verdadeiro caso a palavra esteja em algum ciclo, falso caso contrário;
+		
+		_bool emCiclo (string a, string b): retorna verdadeiro caso estista um ciclo que contenha ambas as 
+		palavras, falso caso contrário;
+		
+		_int mediaGraus (): retorna a média dos graus de todos os vértices;
+		
+		_int analiseComp (char indicador ): retorna o tamanho médio das componentes (indicador = '+'), a maior
+		componente (indicador = '>') ou a menor componente (indicador = '<');
+		
+		_int mediaDist (): retorna a distância média entre duas palavras no grafo;
+	
+	**FUNÇÕES AUXILIARES PRIVADAS:
+		_int nComponentes() e void componentesR (int v, int cont): calcula o número de componentes do 
+		grafo e as numera (cont), armazenando essa numeração no vetor comp[V]. Utiliza o conceito de BFS
+		(busca em largura);
+ 		
+ 		_int buscaDFS (Vertex *novo, bool ifSetEdges): utiliza o conceito de busca em profundidade. O
+ 		campo 'ifSetEdges' indica se a função deve procurar a palavra de 'novo' ou realizar o acréscimo
+ 		das arestas. No primeiro caso, retorna (-1) ou o inteiro correspondente ao índice da palavra.
+ 		No último caso, retorna o int correspondente ao número de arestas adicionadas (sempre par).
+ 		
+ 		_int DFSr (int v, Vertex* novo, bool visited[], bool ifSetEdges): recursiva da função anterior;
+ 		
+ 		_int setEdges (Vertex *novo, int i): seta novas arestas após inserção do vértice 'novo'. O 
+ 		parâmetro 'i' indica o índice do vetor 'graph' que contém a string a ser comparada com 'novo'.
+ 		Vértices vizinhos são separados em 3 casos:
+ 			CASO 1: permutação de 2 letras;
+ 			CASO 2: substituição de 1 letra;
+ 			CASO 3: inserção/remoção de 1 letra.
+ 		Essa função altera os valores de V (número de vértices), A (número de arestas) e o grau do 
+ 		vértice em questão;
+ 		
+ 		_bool emCicloR (int v, int *visited, int parent, int a): recursiva da função emCiclo com 1 ou 2 
+ 		strings dadas como parâmetro. O vetor 'visited[]' sinaliza se o vértice foi visitado e em que ordem.
+ 		o inteiro 'a' é o índice do vértice a ser reencontrado; nos casos positivos, retorna true pois 
+ 		há um ciclo. O inteiro parent é o índice do último vértice visitado. Utiliza o conceito de BFS
+ 		(busca em largura);
+ 		
+ 		_bool ifPath (int a, int b): retorna se existe um caminho de do vértice cujo índice é 'a' até o 
+ 		vértice cujo índice é 'b'. Utiliza o conceito de BFS (busca em largura);
+ 		
+ 		_void resize (): quando chamada, a função dobra o tamanho do vetor atual (2 * tamMax);
+ 		
+ 		_void printG (): auxilia no processo de debug do programa.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>TESTES<<<<<<<<<<<<<<<<<<<<<<<<<<
+_void doTest (Graph *G): realiza os seguintes testes:
+	- medidas: 
+		i. número de vértices;
+		ii. número de arestas;
+		iii. grau médio;
+		iv. grafo denso ou não;
+	
+	- conexidade:
+		i. grafo é conexo ou não;
+		ii. número de componente(s);
+		iii. tamanho médio da(s) componente(s);
+		iv. tamanho da maior componente;
+		v. tamanho da menor componente;
+		
+		OBS: iii, iv e v apenas são calculadas se existem componentes no grafo;	
+	
+	- distMedia: chama a função mediaDist();
+	
+	- tamConexa: chama a função tamConexa (string palavra);
+	
+	- distancia: chama a função dis (string a, string b);
+	
+	- emCiclo1: chama a função emCiclo (string a);
+	
+	- emCiclo2: chama a função emCiclo (string a, string b).
+	
+_OBSERVAÇÕES:
+	- Palavras acentuadas são consideradas 2 caracteres, portanto nos testes onde k = 2, "ó", "é", "á" são 
+	adicionadas no grafo;
+
+	- O número de arestas da componente complexa é sempre uma unidade a menos que o número de vértices. Logo, a 
+	função tamComp() retorna 2 * (grau do vértice) + 1.

@@ -1,0 +1,149 @@
+RELATÓRIO EP0 
+MAC0323
+Fernanda T Itoda
+nusp: 10740825
+
+>>> MACROS:
+_MACROS INDISPENSÁVEIS (podem ser modificadas para diferentes tipos de simulação): 
+- T (tempo máximo de simulação);
+- K (número máximo de aviões que podem contatar por unidade de tempo);
+- C (valor máximo de combustível restante, por unidade de tempo);
+- V (valor máximo do tempo estimado de viagem, por unidade de tempo);
+- EMERGENCIAS (quantidade em % de emergências(TRUE) dos aviões que entram em contato).
+
+_MACROS AUXILIARES:
+- POUSO;
+- DECOLAGEM;
+- COMBUSTIVEL;
+- IMEDIATO;
+- ESPERA;
+- TRUE;
+- FALSE.
+
+>>> VARIÁVEIS ESTÁTICAS:
+Todas as seguintes variáveis são alteradas/utilizadas em funções nas quais não foram enviadas como parâmetro ou retornadas.
+- int t (faz a contagem do tempo de simulação);
+- int t1, t2, t3 (controle de quando ocorrerá um pousou ou uma decolagem);
+- float nPouso, nDecolag (usadas para o cálculo da média de tempo de espera);
+- float somaPouso, somaDec (armazena os valores de tempo de espera dos aviões ao pousar e decolar, respectivamente);
+- float combDisp, nPousaram, nDecolaram (usadas para o cálculo da média de combustível);
+- int PDEmerg (usada para cálculo dos aviões P/D em emergência).
+
+>>> CLASSES:
+_CLASSE AVIÃO: 
+privado:
+- int emerg: 1 para positivo, 0 para negativo, 2 para emergência de combustível e 3 para emergência de tempo de espera;
+- bool PD: 0 para pouso e 1 para decolagem, por convenção;
+- int tempo: caso PD = 0, se refere ao COMBUSTÍVEL. Caso PD = 1, se refere ao TEMPO DE VIAGEM ESTIMADO;
+- int espera: valor da variável estática 't' quando o avião entrou em contato;
+- string aeroporto: caso PD = 0, se refere ao aeroporto de ORIGEM. Caso PD = 1, se refere ao aeroporto de DESTINO;
+- string numero: identificação do avião.
+publico:
+- Aviao *prox (ponteiro para o próximo avião);
+- construtor e destrutor;
+void alocaProx (função contrutora da próxima unidade, usada pela função "avioesContato");
+- void setEmerg, setPD, setTempo, setEspera, setAeroporto, setNumero (funções para setar os valores sorteados para os aviões em contato, usada pela função "avioesContato"; "setValues");
+- void addPCombustivel (função usada para cálculo da média de combustível dos aviões que pousaram);
+- void addTPousaram, addTDecolaram (funções que incrementam os tempos de espera na variável estática de soma, após um pouso ou decoalgem);
+- int tipoEmerg, tipoPD (auxiliar para retornar valores do campo privado em funções da classe Pista);
+- void mostrarAviao (imprime a identificação e o aeroporto de origem/destino do avião);
+- int verificaAviao (verifica se o referente avião deve ser setado como emergência, por tempo de espera ou combustível);
+- float somaEspera (soma os tempos de de combustível dos aviões em espera).
+
+_CLASSE PISTA:
+privado:
+- int nEspera (aviões na fila, incluindo nEmerg e nImediato);
+- int nEmerg (aviões na fila em emergência, incluindo nImediato);
+- bool nImediato (avião na fila que precisa pousar imediatamente);
+- string nome (pista 1, 2, 3 ou contato);
+- Pista* comparaComb, comparaEmerg, comparaNormal (funções auxiliares de "comparaPistas"; como são usadas somente nessa função, podem estar no privado);
+publico:
+- Aviao *cablista (ponteiro para a lista ligada com cabeça dos aviões da pista em questão);
+- construtor e destrutor;
+- void setNEspera, setNEmerg, setImed, setNome (funções para setar os valores de início da pista; "setPista");
+- Pista* comparaPistas (função para analisar, de acordo com o primeiro avião da "cabLista", para qual pista ele deve ser enviado);
+- void verificaPista (função para verificar, a cada unidade de tempo, se algum dos aviões - ainda não setados com emergência - devem ter prioridade no pouso/decolagem. Ou seja, se estão em emergência de combustível ou tempo de espera inferior à 10% do seu tempo estimado de viagem);
+- void adicionar (adiciona o avião enviado como parâmetro na referente pista, considerando se sua situação é emergencial ou não - o que também é enviado como parâmetro -);
+- void avioesContato (insere na pista os aviões com seus valores já aleatoriamente sorteados através de uma lista ligada com cabeça);
+- void mostrarEspera (mostra aviões em espera na referente lista);
+- bool remove1 (remove o primeiro avião da referente pista; retorna TRUE se a remoção ocorreu, e FALSE caso não exista avião para ser removido).
+
+>>> GERAL:
+Após setados os valores de Aviao, Esses objetos estão em uma lista ligada com cabeça, que se refere aos aviões que contataram a torre por unidade de tempo. A partir deles, será analisado qual objeto será direcionado para qual pista.
+A lista de prioridade seguirá o seguinte raciocínio:
+- emergência por combustível (2) > emergência convencionada (1) = emergência por tempo de espera (3) < condições normais.
+As pistas são representadas por listas ligadas com cabeça. E os aviões que estão nelas estão ordenados nas categorias 'nEmerg' e 'nEspera.
+
+Por convenção, são setadas emergências do tipo ESPERA quando o número de simulações restantes até o avião ultrapassar o limite de 10% seja 2. Esse valor é ideal pois no pior cenário, ou seja, quando na simulação anterior ocorreu ação (P/D) na pista, o tempo que o avião necessariamente teria que esperar é 2.
+
+A simulação do programa ocorre na seguinte ordem: 
+- construção das pistas e assimilação de seus valores iniciais (nEmerg = 0, nEspera = 0, nImed = FALSE);
+- verificação das pistas pela função "verificaPista"; 
+- análise de aviões em contato pela função "avioesContato", que modifica a lista ligada com cabeça referente à "pista de contato";
+- envio dos aviões da "pista de contato" para as pistas ideais;
+- liberação do primeiro avião das pistas 1, 2 e 3 pela função "remove1", quando os tempos t1, t2, t3 estão em 0. Após a liberação, esses tempos são setados para 2 e descrescem a cada iteração, até 0;
+- mostra aviões em espera para decolar ou pousar pela função "mostrarEspera";
+- cálculo dos tempos médios de espera antes do pouso e decolagem e impressão dos mesmos;
+- cálculo das quantidades médias de combustível ao pousar e dos aviões que estão esperando e impressão dos mesmos;
+- cálculo dos aviões que estão, naquela iteração, pousando ou decolando em estado de emergência, e impresão do mesmo.
+
+Toda análise de um avião segue o seguinte raciocínio:
+- chama a função "comparaPistas", que retorna a pista ideal para o avião em questão;
+- chama a função adicionar (existe pista ideal) ou envia para o aeroporto vizinho (função "comparaPistas" retornou NULL).
+
+Durante toda adição de um avião a uma pista, ocorre o acréscimo correto (nEspera++, nEmerg++, nImed = TRUE), assim como durante toda liberação, ocorre o decréscimo correto.
+
+Lista de Aeroportos (30):
+BCN (referência), AMS, BIO, BLQ, BOD, BRU, BSL, CDG, DUB, FCO, FRA, GRX, JFK, LGW,
+LPL, LYS, MAD, MAH, MLA, MUC, NTE, ORY, PMI, RAK, SDR, STN, STR, SXF, VCE, ZRH.
+
+Obs: como BCN é referência, ele não é setado nos campos "aeroporto" dos aviões. Quando esse campo é do tipo "origem", BCN é o destino, e vice-versa.
+
+Lista de Empresas (8):
+VLG Vueling Airlines (Spain)
+RYR Ryanair (Ireland)
+EZY easyJet (UK)
+IBE Iberia (Espana)
+DLH Lufthansa (Germany)
+IBK Norwegian Air International (Ireland)
+TAP Transportes Aereos Portugueses (Portugal)
+NAX Norwegian Air Shuttle 
+
+Para evitar eventuais repetições no sorteio dessas strings (aeroporto e identificação do avião), é possível adicionar mais strings no vetor que encontra-se na função avioesContato. Nesse ep foi inserido o mínimo exigido.
+
+Os cálculos de médias e quantidades exigidos são implementados através de variáveis estáticas e incrementos/descréscimos ao longo da simulação, a fim de otimizar o processo. Isso ocorre na função "remove1", "adicionar", "verificaPista" e "somaEspera", de forma que essa última é a única que é criada somente com esse propósito.
+
+>>> ALGUMAS FUNÇÕES IMPORTANTES:
+_VERIFICAPISTA:
+Caso o campo nEspera = 0 , não há aviões para serem verificados. Então a função retorna no início para evitar execuções desnecessárias do código. 
+
+Da pista referente, será analisado o campo "cabLista". 
+O ponteiro "plista" inicia a análise nos aviões de emergência cujos campos "emerg" estão setados ou por COMBUSTIVEL, ou por TRUE e são de pouso. Esses são os únicos aviões de emergência que podem sofrer mudança (no caso, para IMEDIATO, ou seja, sem combustível). Em casos de mudança, segue-se o processo convencional de adição à pista ideal (que não possua nenhum avião de campo IMEDIATO e realize a liberação naquela iteração; ou ao aeroporto vizinho, o que não costuma ocorrer, mas funciona como "default").
+
+A segunda análise é nos aviões não setados com emergência. Considerando que um avião foi atualizado para emergência nessa análise, a função "comparaPistas" é chamada e retorna a pista para a qual o avião deve ser enviado. Então, "adicionar" é chamada indicando a pista e o tipo de emergência retornadas.
+
+_VERIFICAAVIAO:
+A função pode retornar ESPERA, COMBUSTIVEL, FALSE ou IMEDIATO. 
+Para espera, calcula-se 10% do tempo estimado de viagem e, caso esse valor seja maior ou igual ao tempo que o avião está esperando - 3, retorna-se e o campo "emerg" é setado como ESPERA.
+Para combustível, analisa-se se seu combustível menos o tempo que está esperando é inferior ou igual a 3, se sim, seta-se e retorna COMBUSTIVEL.
+Em outros casos, retorna FALSE.
+
+Os valores 3 são pensados considerando que a liberação de pistas ocorre de 2 em 2 tempos. OU seja, considera-se o pior caso (a liberação ocorreu na iteração anterior) para evitar envios indesejados à aeroportos vizinhos.
+
+_AVIOESCONTATO:
+Os valores possíveis para os strings apresentados estão em vetores pré-definidos com números de vôos reais e aeroportos reais, retirados do site: https://pt.flightaware.com/live/airport/LEBL. Ou seja, o aeroporto de referência é o de Barcelona (BCN).
+
+Todos os campos de Aviao são sorteados "aleatoriamente" pela função rand(). Os campos string são sorteados de dois "string vetor[]". O restante da forma convencional. Não foi usada semente para o rand a fim de conseguir a mesma ordem de valores sorteados (o que facilita o debug), mas poderia ser feito utilizando "srand()" e a biblioteca "time.h".
+Se o valor sorteado para o campo combustivel for 1, o campo "emerg" automaticamente é setado para 2. Analogamente, se para o campo espera for sorteado um valor inferior à 10, o campo "emerg" é 3. 
+Os valores são setados pela função setValues.
+
+_COMPARAPISTAS:
+Pressupõe que a pista referente não está vazia. No geral, essa pista é uma pista auxiliar que contem como primeiro avião aquele que deverá ser analisado.
+
+Considerando se o avião é de pouso/decolagem e seu tipo de emergência, a função "comparaComb", "comparaEmerg" ou "comparaNormal" é chamada. Nessas funções, a ordem de preferência entre as pistas é a enviada como parâmetro. Por exemplo, comparaComb(p3, p2, p1) significa que p3 > p2 > p1 na hora de retornar a pista ideal.
+
+>>> OBSERVAÇÕES FINAIS
+_Para melhor organização, é possível fazer uso de bibliotecas, mas não era necessário nesse ep.
+_A biblioteca time.h e a utilização da função srand() para gerar números aleatórios estão comentados, caso seja preferência gerar valores realmente aleatórios. 
+
+ 
